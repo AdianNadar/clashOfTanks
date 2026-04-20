@@ -19,11 +19,14 @@ blue      = (40,  80,  210)
 
 # ── Tank class ────────────────────────────────────────────────────────────────
 class Tank:
-    def __init__(self, x, colour, speed):
+    def __init__(self, x, colour, speed, name):
         self.x      = x
         self.y      = groundY - tankH
         self.colour = colour
         self.speed  = speed
+        self.fuelLevel = 100
+        self.name = name
+
 
     @property
     def rect(self):
@@ -35,6 +38,27 @@ class Tank:
 
     def shoot(self):
         print("SHOOT (not yet implemented)")
+
+    def aimTurret(self):
+        print("Not implemented")
+
+    def changeAmmo(self): #roll though existing ammo ike caroselle
+        print("Not implemented")
+
+    def showName(self):
+        print(f"Current Tank: {self.name}")
+
+    def showFuelLevel(self):
+        if self.fuelLevel > 0:
+            print(f"Fuel level: {self.fuelLevel} ")
+        else: print("No fuel!")
+
+    def useFuelUnit(self,unitLevel):
+        if self.fuelLevel > 0:
+            self.fuelLevel -= unitLevel
+        else: pass
+
+
 
 
 # ── Rendering ─────────────────────────────────────────────────────────────────
@@ -58,6 +82,12 @@ def handleInput(event, tanks, currentTurn):
             activeTank.shoot()
             currentTurn = (currentTurn + 1) % len(tanks)
 
+        if event.key == pygame.K_f:
+            activeTank.showFuelLevel()
+
+        if event.key == pygame.K_n:
+            activeTank.showName()
+
     return currentTurn
 
 
@@ -66,10 +96,15 @@ def handleMovement(tanks, currentTurn):
     keys = pygame.key.get_pressed()
     activeTank = tanks[currentTurn]
 
-    if keys[pygame.K_LEFT]:
-        activeTank.move(-1)
-    if keys[pygame.K_RIGHT]:
-        activeTank.move(1)
+    #movement
+    if activeTank.fuelLevel != 0:
+        if keys[pygame.K_LEFT]:
+            activeTank.move(-1)
+            activeTank.useFuelUnit(1)
+        if keys[pygame.K_RIGHT]:
+            activeTank.move(1)
+            activeTank.useFuelUnit(1)
+
 
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -80,8 +115,8 @@ def main():
     clock = pygame.time.Clock()
 
     tanks = [
-        Tank(x=150,         colour=red,  speed=5), #tank1
-        Tank(x=screenW-150, colour=blue, speed=5), #tank2
+        Tank(x=150,         colour=red,  speed=5, name ="Tank1"), #tank1
+        Tank(x=screenW-150, colour=blue, speed=5, name ="Tank2"), #tank2
     ]
 
     currentTurn = 0

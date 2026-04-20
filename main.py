@@ -1,5 +1,8 @@
 import pygame
 import sys
+import math
+
+from ammo import TestAmmo
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 screenW, screenH = 900, 500
@@ -26,6 +29,8 @@ class Tank:
         self.speed  = speed
         self.fuelLevel = 100
         self.name = name
+        self.turretAngle = 90  # straight up
+        self.turretLength = 40
 
 
     @property
@@ -36,8 +41,26 @@ class Tank:
         self.x += direction * self.speed
         self.x = max(tankW // 2, min(screenW - tankW // 2, self.x))
 
+    #SHOOT method
     def shoot(self):
-        print("SHOOT (not yet implemented)")
+        # get turret direction (unit vector)
+        dx, dy = self.getTurretDirection()
+        # turret base (top center of tank)
+        baseX = self.x
+        baseY = self.y
+        # tip of the turret
+        tipX = baseX + dx * self.turretLength
+        tipY = baseY + dy * self.turretLength
+        # create bullet at the tip
+        bullet = TestAmmo(tipX, tipY, (dx, dy))
+
+        print(f"{self.name} fired from ({round(tipX)}, {round(tipY)})")
+
+        return bullet
+
+
+
+
 
     def aimTurret(self):
         print("Not implemented")
@@ -58,6 +81,20 @@ class Tank:
             self.fuelLevel -= unitLevel
         else: pass
 
+    def showTurretAngle(self):
+        print(f"Turret angle: {self.turretAngle}")
+
+    #adjust turret angle
+    def adjustTurret(self, direction):
+        self.turretAngle += direction
+        self.turretAngle = max(0, min(180, self.turretAngle))
+
+    def getTurretDirection(self):
+        rad = math.radians(self.turretAngle)
+        dx = math.cos(rad)
+        dy = -math.sin(rad)  # negative because pygame y goes down
+        return dx, dy
+
 
 
 
@@ -69,17 +106,28 @@ def renderBackground(surface):
 
 
 def renderTank(surface, tank):
+
+    # tank body
     pygame.draw.rect(surface, tank.colour, tank.rect)
     pygame.draw.rect(surface, black, tank.rect, 2)
 
+    # turret base (top center of tank)
+    baseX = tank.x
+    baseY = tank.y
+    dx, dy = tank.getTurretDirection()
+    endX = baseX + dx * tank.turretLength
+    endY = baseY + dy * tank.turretLength
+    pygame.draw.line(surface, black, (baseX, baseY), (endX, endY), 4)
+
 
 # ── Input handling ────────────────────────────────────────────────────────────
-def handleInput(event, tanks, currentTurn):
+def handleInput(event, tanks, currentTurn,bullets):
     if event.type == pygame.KEYDOWN:
         activeTank = tanks[currentTurn]
 
         if event.key == pygame.K_s:
-            activeTank.shoot()
+            bullet = activeTank.shoot()
+            bullets.append(bullet)
             currentTurn = (currentTurn + 1) % len(tanks)
 
         if event.key == pygame.K_f:
@@ -87,6 +135,9 @@ def handleInput(event, tanks, currentTurn):
 
         if event.key == pygame.K_n:
             activeTank.showName()
+
+        if event.key == pygame.K_v:
+            activeTank.showTurretAngle()
 
     return currentTurn
 
@@ -105,6 +156,11 @@ def handleMovement(tanks, currentTurn):
             activeTank.move(1)
             activeTank.useFuelUnit(1)
 
+        if keys[pygame.K_q]:
+            activeTank.adjustTurret(-1)
+        if keys[pygame.K_e]:
+            activeTank.adjustTurret(1)
+
 
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -115,9 +171,12 @@ def main():
     clock = pygame.time.Clock()
 
     tanks = [
-        Tank(x=150,         colour=red,  speed=5, name ="Tank1"), #tank1
-        Tank(x=screenW-150, colour=blue, speed=5, name ="Tank2"), #tank2
+        Tank(x=150,         colour=red,  speed=5, name ="Tank1(Red)"), #tank1
+        Tank(x=screenW-150, colour=blue, speed=5, name ="Tank2(Blue)"), #tank2
+
     ]
+
+    bullets = []
 
     currentTurn = 0
 
@@ -127,13 +186,21 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            currentTurn = handleInput(event, tanks, currentTurn)
+            currentTurn = handleInput(event, tanks, currentTurn, bullets)
 
         handleMovement(tanks, currentTurn)
 
         renderBackground(screen)
         for tank in tanks:
             renderTank(screen, tank)
+
+        for bullet in bullets:
+            bullet.update()
+            bullet.draw(screen)
+
+
+        bullets = [b for b in bullets if b.alive]
+        #removes bullets that are not alive (collided)
 
         pygame.display.flip()
         clock.tick(fps)

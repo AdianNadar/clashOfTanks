@@ -3,6 +3,7 @@ import math
 
 
 
+
 class Ammo:
     # Shared launch force for all ammo (can tweak later)
     LAUNCH_FORCE = 12
@@ -31,7 +32,7 @@ class Ammo:
 
         self.alive = True
 
-    def update(self):
+    def update(self,tanks):
         """Update position with simple physics"""
         # gravity affected by weight
         self.vy += self.GRAVITY * self.weight
@@ -39,7 +40,7 @@ class Ammo:
         self.x += self.vx
         self.y += self.vy
 
-        self.checkBulletStatus()
+        self.checkBulletStatus(tanks)
 
 
     def draw(self, surface):
@@ -51,20 +52,40 @@ class Ammo:
             self.collisionRadius
         )
 
-    def checkCollision(self):
-        """Basic ground collision"""
-        if self.y >= self.GROUND_Y:
+
+
+    def checkCollision(self, tanks):
+        # create bullet hitbox
+        bulletRect = pygame.Rect(
+            self.x - self.collisionRadius,
+            self.y - self.collisionRadius,
+            self.collisionRadius * 2,
+            self.collisionRadius * 2
+        )
+        # ── Tank collision ─
+        for tank in tanks:
+            if bulletRect.colliderect(tank.rect):
+                self.alive = False
+                print(f"Tank: {tank.name} got hit!!")
+                return True
+        # ── Ground collision ─
+        if self.y >= 420:
             self.alive = False
             self.onImpact()
             return True
+
         return False
+
+
+
+
 
     def onImpact(self):
         """Override in subclasses"""
         print(f"{self.name} impacted with strength {self.impactStrength}")
 
-    def checkBulletStatus(self):
-        self.checkCollision()
+    def checkBulletStatus(self,tanks):
+        self.checkCollision(tanks)
 
 
 

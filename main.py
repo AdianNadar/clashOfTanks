@@ -195,7 +195,7 @@ def main():
             renderTank(screen, tank)
 
         for bullet in bullets:
-            bullet.update()
+            bullet.update(tanks)
             bullet.draw(screen)
 
 

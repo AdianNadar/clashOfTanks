@@ -32,15 +32,12 @@ class Ammo:
 
         self.alive = True
 
-    def update(self,tanks):
+    def update(self):
         """Update position with simple physics"""
         # gravity affected by weight
         self.vy += self.GRAVITY * self.weight
-
         self.x += self.vx
         self.y += self.vy
-
-        self.checkBulletStatus(tanks)
 
 
     def draw(self, surface):
@@ -54,6 +51,7 @@ class Ammo:
 
 
 
+    #outdated
     def checkCollision(self, tanks):
         # create bullet hitbox
         bulletRect = pygame.Rect(
@@ -84,8 +82,8 @@ class Ammo:
         """Override in subclasses"""
         print(f"{self.name} impacted with strength {self.impactStrength}")
 
-    def checkBulletStatus(self,tanks):
-        self.checkCollision(tanks)
+    def onTankHit(self,tank):
+        print(f"BOOOOM to tank {tank.name}")
 
 
 
@@ -102,4 +100,19 @@ class TestAmmo(Ammo):
             weight=1.0,            # affects gravity
             impactStrength=10,
             collisionRadius=4
+        )
+
+
+class HeavyShot(Ammo):
+    def __init__(self, x, y, direction):
+        super().__init__(
+            x=x,
+            y=y,
+            direction=direction,
+            name="Heavy shot",
+            description="large heavy ball of destruction",
+            velocity=1.0,          # multiplier
+            weight=4.0,            # affects gravity
+            impactStrength=30,
+            collisionRadius=12
         )

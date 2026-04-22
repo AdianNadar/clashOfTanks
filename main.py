@@ -2,7 +2,7 @@ import pygame
 import sys
 import math
 
-from ammo import TestAmmo
+from ammo import TestAmmo, HeavyShot
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 screenW, screenH = 900, 500
@@ -51,15 +51,16 @@ class Tank:
         # tip of the turret
         tipX = baseX + dx * self.turretLength
         tipY = baseY + dy * self.turretLength
+
+
         # create bullet at the tip
-        bullet = TestAmmo(tipX, tipY, (dx, dy))
+        #bullet = TestAmmo(tipX, tipY, (dx, dy))
+        bullet = HeavyShot(tipX, tipY, (dx, dy))
+
 
         print(f"{self.name} fired from ({round(tipX)}, {round(tipY)})")
 
         return bullet
-
-
-
 
 
     def aimTurret(self):
@@ -96,14 +97,60 @@ class Tank:
         return dx, dy
 
 
+# ──────── Terrain collision helper ─────────────────────────────────────────────────────────────────
+
+def handleBulletTerrainCollision(bullet, terrain):
+    x = int(bullet.x)
+    y = int(bullet.y)
+
+    if 0 <= x < terrain.get_width() and 0 <= y < terrain.get_height():
+        if terrain.get_at((x, y)) == (0, 0, 0):  # black = ground
+            createExplosion(x, y, terrain, 25)
+            bullet.alive = False
+            bullet.onImpact()
+            return True
+
+    return False
+
+# ──────── Tank and ammo collision helper ────────────────────────
+
+def handleBulletTankCollision(bullet, tanks, terrain):
+    bulletRect = pygame.Rect(
+        bullet.x - bullet.collisionRadius,
+        bullet.y - bullet.collisionRadius,
+        bullet.collisionRadius * 2,
+        bullet.collisionRadius * 2
+    )
+
+    for tank in tanks:
+        if bulletRect.colliderect(tank.rect):
+            # explosion at tank hit
+            createExplosion(bullet.x, bullet.y, terrain, 25)
+            bullet.alive = False
+            bullet.onTankHit(tank)
+            return True
+
+    return False
+
+# ── Explosion logic ──────────────────
+
+def createExplosion(x, y, terrain, radius):
+    # destroy terrain
+    pygame.draw.circle(
+        terrain,
+        (255, 255, 255),  # white = air
+        (int(x), int(y)),
+        radius
+    )
+
+
 
 
 # ── Rendering ─────────────────────────────────────────────────────────────────
-def renderBackground(surface):
-    surface.fill(lightGrey)
-    pygame.draw.rect(surface, darkGrey, pygame.Rect(0, groundY, screenW, screenH - groundY))
-    pygame.draw.line(surface, midGrey, (0, groundY), (screenW, groundY), 3)
 
+def renderBackground(surface, terrain):
+    surface.fill(white)  # sky
+    surface.blit(terrain, (0, 0))
 
 def renderTank(surface, tank):
 
@@ -170,6 +217,13 @@ def main():
     pygame.display.set_caption("Tank Game")
     clock = pygame.time.Clock()
 
+ # ── Terrain setup ─────────────────────
+    terrain = pygame.Surface((screenW, screenH))
+    terrain.fill(white)  # sky
+    pygame.draw.rect(terrain, black, (0, groundY, screenW, screenH - groundY))
+
+# ── Tanks ────────────────────────────
+
     tanks = [
         Tank(x=150,         colour=red,  speed=5, name ="Tank1(Red)"), #tank1
         Tank(x=screenW-150, colour=blue, speed=5, name ="Tank2(Blue)"), #tank2
@@ -190,12 +244,19 @@ def main():
 
         handleMovement(tanks, currentTurn)
 
-        renderBackground(screen)
+        renderBackground(screen, terrain)
         for tank in tanks:
             renderTank(screen, tank)
 
         for bullet in bullets:
-            bullet.update(tanks)
+            bullet.update()
+
+            #bullet collision handling
+            hitTank = handleBulletTankCollision(bullet, tanks, terrain)
+            if not hitTank:
+                handleBulletTerrainCollision(bullet, terrain)
+
+
             bullet.draw(screen)
 
 

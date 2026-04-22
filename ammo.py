@@ -98,7 +98,7 @@ class TestAmmo(Ammo):
             description="Basic test projectile",
             velocity=1.0,          # multiplier
             weight=1.0,            # affects gravity
-            impactStrength=10,
+            impactStrength=4,
             collisionRadius=4
         )
 
@@ -113,8 +113,8 @@ class HeavyShot(Ammo):
             description="large heavy ball of destruction",
             velocity=1.0,          # multiplier
             weight=4.0,            # affects gravity
-            impactStrength=30,
-            collisionRadius=12
+            impactStrength=20,
+            collisionRadius=15
         )
 
 class LongShot(Ammo):

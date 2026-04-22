@@ -22,7 +22,7 @@ blue      = (40,  80,  210)
 
 # ── Tank class ────────────────────────────────────────────────────────────────
 class Tank:
-    def __init__(self, x, colour, speed, name):
+    def __init__(self, x, imageFile, colour, speed, name):
         self.x      = x
         self.y      = groundY - tankH
         self.colour = colour
@@ -31,6 +31,10 @@ class Tank:
         self.name = name
         self.turretAngle = 90  # straight up
         self.turretLength = 40
+
+        #tank sprite two copies since rotation from original always
+        self.original_image = pygame.image.load(imageFile).convert_alpha()
+        self.image = self.original_image
 
 
     @property
@@ -54,9 +58,9 @@ class Tank:
 
 
         # create bullet at the tip
-        bullet = TestAmmo(tipX, tipY, (dx, dy))
+        #bullet = TestAmmo(tipX, tipY, (dx, dy))
         #bullet = HeavyShot(tipX, tipY, (dx, dy))
-        #bullet = LongShot(tipX, tipY, (dx, dy))
+        bullet = LongShot(tipX, tipY, (dx, dy))
 
 
         print(f"{self.name} fired from ({round(tipX)}, {round(tipY)})")
@@ -106,7 +110,7 @@ def handleBulletTerrainCollision(bullet, terrain):
 
     if 0 <= x < terrain.get_width() and 0 <= y < terrain.get_height():
         if terrain.get_at((x, y)) == (0, 0, 0):  # black = ground
-            createExplosion(x, y, terrain, 25)
+            createExplosion(x, y, terrain, bullet.impactStrength)
             bullet.alive = False
             bullet.onImpact()
             return True
@@ -126,7 +130,7 @@ def handleBulletTankCollision(bullet, tanks, terrain):
     for tank in tanks:
         if bulletRect.colliderect(tank.rect):
             # explosion at tank hit
-            createExplosion(bullet.x / SCALE, bullet.y / SCALE, terrain, 25)
+            createExplosion(bullet.x / SCALE, bullet.y / SCALE, terrain, bullet.impactStrength)
             bullet.alive = False
             bullet.onTankHit(tank)
             return True
@@ -161,7 +165,6 @@ def applyTerrainGravity(terrain):
 
 def createExplosion(x, y, terrain, radius):
     # destroy terrain
-    radius = radius // SCALE
     pygame.draw.circle(
         terrain,
         (255, 255, 255),  # white = air
@@ -180,9 +183,11 @@ def renderBackground(surface, terrain):
 
 def renderTank(surface, tank):
 
-    # tank body
-    pygame.draw.rect(surface, tank.colour, tank.rect)
-    pygame.draw.rect(surface, black, tank.rect, 2)
+    # draw sprite for tank body
+    rotated = pygame.transform.rotate(tank.original_image, 0)  # 0 for now, slope angle later
+    rect = rotated.get_rect(center=(tank.x, tank.y + tankH // 2))
+    surface.blit(rotated, rect.topleft)
+
 
     # turret base (top center of tank)
     baseX = tank.x
@@ -272,8 +277,8 @@ def main():
 # ── Tanks ────────────────────────────
 
     tanks = [
-        Tank(x=150,         colour=red,  speed=5, name ="Tank1(Red)"), #tank1
-        Tank(x=screenW-150, colour=blue, speed=5, name ="Tank2(Blue)"), #tank2
+        Tank(x=150,         imageFile = "tankBodyImages/tankRed.png", colour=red,  speed=5, name ="Tank1(Red)"), #tank1
+        Tank(x=screenW-150, imageFile = "tankBodyImages/tankBlue.png", colour=blue, speed=5, name ="Tank2(Blue)"), #tank2
 
     ]
 

@@ -116,3 +116,18 @@ class HeavyShot(Ammo):
             impactStrength=30,
             collisionRadius=12
         )
+
+class LongShot(Ammo):
+    def __init__(self, x, y, direction):
+        super().__init__(
+            x=x,
+            y=y,
+            direction=direction,
+            name="Heavy shot",
+            description="large heavy ball of destruction",
+            velocity=1.3,          # multiplier
+            weight=0.5,            # affects gravity
+            impactStrength=2,
+            collisionRadius=2
+        )
+

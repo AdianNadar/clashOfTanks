@@ -2,7 +2,7 @@ import pygame
 import sys
 import math
 
-from ammo import TestAmmo, HeavyShot
+from ammo import TestAmmo, HeavyShot, LongShot
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 screenW, screenH = 900, 500
@@ -54,8 +54,9 @@ class Tank:
 
 
         # create bullet at the tip
-        #bullet = TestAmmo(tipX, tipY, (dx, dy))
-        bullet = HeavyShot(tipX, tipY, (dx, dy))
+        bullet = TestAmmo(tipX, tipY, (dx, dy))
+        #bullet = HeavyShot(tipX, tipY, (dx, dy))
+        #bullet = LongShot(tipX, tipY, (dx, dy))
 
 
         print(f"{self.name} fired from ({round(tipX)}, {round(tipY)})")
@@ -100,8 +101,8 @@ class Tank:
 # ──────── Terrain collision helper ─────────────────────────────────────────────────────────────────
 
 def handleBulletTerrainCollision(bullet, terrain):
-    x = int(bullet.x)
-    y = int(bullet.y)
+    x = int(bullet.x / SCALE)
+    y = int(bullet.y / SCALE)
 
     if 0 <= x < terrain.get_width() and 0 <= y < terrain.get_height():
         if terrain.get_at((x, y)) == (0, 0, 0):  # black = ground
@@ -125,17 +126,42 @@ def handleBulletTankCollision(bullet, tanks, terrain):
     for tank in tanks:
         if bulletRect.colliderect(tank.rect):
             # explosion at tank hit
-            createExplosion(bullet.x, bullet.y, terrain, 25)
+            createExplosion(bullet.x / SCALE, bullet.y / SCALE, terrain, 25)
             bullet.alive = False
             bullet.onTankHit(tank)
             return True
 
     return False
 
+
+# ── Apply gravity to terrain (fall logic) ──────────────────
+
+def applyTerrainGravity(terrain):
+    width = terrain.get_width()
+    height = terrain.get_height()
+
+    for x in range(width):
+        for y in range(height - 2, -1, -1):  # from bottom up
+
+            current = terrain.get_at((x, y))
+            below = terrain.get_at((x, y + 1))
+
+            # if ground pixel with empty below → fall
+            if current == (0, 0, 0) and below == (255, 255, 255):
+                terrain.set_at((x, y), (255, 255, 255))   # remove
+                terrain.set_at((x, y + 1), (0, 0, 0))     # move down
+
+
+
+
+
+
+
 # ── Explosion logic ──────────────────
 
 def createExplosion(x, y, terrain, radius):
     # destroy terrain
+    radius = radius // SCALE
     pygame.draw.circle(
         terrain,
         (255, 255, 255),  # white = air
@@ -149,8 +175,8 @@ def createExplosion(x, y, terrain, radius):
 # ── Rendering ─────────────────────────────────────────────────────────────────
 
 def renderBackground(surface, terrain):
-    surface.fill(white)  # sky
-    surface.blit(terrain, (0, 0))
+    scaledTerrain = pygame.transform.scale(terrain, (screenW, screenH))
+    surface.blit(scaledTerrain, (0, 0))
 
 def renderTank(surface, tank):
 
@@ -211,16 +237,37 @@ def handleMovement(tanks, currentTurn):
 
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
+
+global SCALE
+
 def main():
+
+    # KEY VARIABLES
+
+    global SCALE
+    SCALE = 5
+    terrainW = screenW // SCALE
+    terrainH = screenH // SCALE
+    terrainFallTimer = 0
+    terrainFallDelay = 250  # milliseconds
+
+#── Pygame init start ─────────────────────
+
     pygame.init()
     screen = pygame.display.set_mode((screenW, screenH))
     pygame.display.set_caption("Tank Game")
     clock = pygame.time.Clock()
 
  # ── Terrain setup ─────────────────────
-    terrain = pygame.Surface((screenW, screenH))
-    terrain.fill(white)  # sky
-    pygame.draw.rect(terrain, black, (0, groundY, screenW, screenH - groundY))
+
+    terrain = pygame.Surface((terrainW, terrainH))
+    terrain.fill(white)
+
+    pygame.draw.rect(
+        terrain,
+        black,
+        (0, groundY // SCALE, terrainW, (screenH - groundY) // SCALE)
+    )
 
 # ── Tanks ────────────────────────────
 
@@ -233,6 +280,8 @@ def main():
     bullets = []
 
     currentTurn = 0
+
+    # ──── Running Loop ─────────────
 
     running = True
     while running:
@@ -255,13 +304,20 @@ def main():
             hitTank = handleBulletTankCollision(bullet, tanks, terrain)
             if not hitTank:
                 handleBulletTerrainCollision(bullet, terrain)
-
-
             bullet.draw(screen)
 
 
         bullets = [b for b in bullets if b.alive]
         #removes bullets that are not alive (collided)
+
+        #terrain falling logic
+        terrainFallTimer += clock.get_time()
+
+        if terrainFallTimer > terrainFallDelay:
+            for i in range(3):
+                applyTerrainGravity(terrain)
+            terrainFallTimer = 0
+
 
         pygame.display.flip()
         clock.tick(fps)
